@@ -70,5 +70,9 @@ $$
 \frac{\partial J_{skip-gram}(v_c,w_{t-m},\dots,w_{t+m},U)}{\partial v_w}&=0
 \end{align}
 $$
+## 2 Implementing word2vec
+![](./a2/word_vectors.png)
+
+The direction difference between the word vectors of positive emotion and the corresponding word vectors of negative emotion is nearly linear.
 
 

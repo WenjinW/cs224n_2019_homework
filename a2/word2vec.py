@@ -17,7 +17,7 @@ def sigmoid(x):
     """
 
     ### YOUR CODE HERE
-
+    s = 1 / (1 + np.exp(-x))
     ### END YOUR CODE
 
     return s
@@ -54,11 +54,26 @@ def naiveSoftmaxLossAndGradient(
 
     ### YOUR CODE HERE
 
-    ### Please use the provided softmax function (imported earlier in this file)
+    ### Please use the provided softmax funct ion (imported earlier in this file)
     ### This numerically stable implementation helps you avoid issues pertaining
     ### to integer overflow. 
-
-
+    # 0 prepare
+    # num of outside words; dim of word vector
+    N, D = outsideVectors.shape
+    # 1 forward
+    # 1.1 compute score
+    scores = np.matmul(outsideVectors, centerWordVec.reshape((D,1))).reshape((1, N)) # (1, N)
+    # 1.2 compute probability
+    p = softmax(scores) # (1, N)
+    # 1. compute loss
+    loss = -np.log(p[0, outsideWordIdx])
+    # 2 compute gradient
+    # 2.1 compute gradient of center vector
+    y = np.zeros(p.shape)
+    y[0, outsideWordIdx] = 1
+    gradCenterVec = np.matmul(p-y, outsideVectors).reshape((1,D))
+    # 2.2 compute gradient of outside vectors
+    gradOutsideVecs = np.matmul((p-y).reshape((N,1)), centerWordVec.reshape((1,D)))
     ### END YOUR CODE
 
     return loss, gradCenterVec, gradOutsideVecs
@@ -85,14 +100,9 @@ def negSamplingLossAndGradient(
 ):
     """ Negative sampling loss function for word2vec models
 
-    Implement the negative sampling loss and gradients for a centerWordVec
-    and a outsideWordIdx word vector as a building block for word2vec
-    models. K is the number of negative samples to take.
+    Implement the negative sampling loss and gradients for a centerWordVec and a outsideWordIdx word vector as a building block for word2vec models. K is the number of negative samples to take.
 
-    Note: The same word may be negatively sampled multiple times. For
-    example if an outside word is sampled twice, you shall have to
-    double count the gradient with respect to this word. Thrice if
-    it was sampled three times, and so forth.
+    Note: The same word may be negatively sampled multiple times. For example if an outside word is sampled twice, you shall have to double count the gradient with respect to this word. Thrice if it was sampled three times, and so forth.
 
     Arguments/Return Specifications: same as naiveSoftmaxLossAndGradient
     """
@@ -105,7 +115,26 @@ def negSamplingLossAndGradient(
     ### YOUR CODE HERE
 
     ### Please use your implementation of sigmoid in here.
+    # 1 compute score
+    U = None
+    for idx in indices:
+        if U is None:
+            U = outsideVectors[idx].reshape((1,-1))
+        else:
+            U = np.vstack((U, -outsideVectors[idx].reshape(1,-1)))
+    # print("shape U:", U.shape)
+    scores = np.matmul(U, centerWordVec.reshape((-1,1)))
+    # print("shape scores:", scores.shape)
+    loss = np.sum(-np.log(sigmoid(scores)))
 
+    gradCenterVec = np.matmul(-(1-sigmoid(scores.reshape((1,-1)))), U)
+    grad = np.matmul((1-sigmoid(scores.reshape((-1,1)))), centerWordVec.reshape((1,-1)))
+    gradOutsideVecs = np.zeros(outsideVectors.shape)
+    for i, idx in enumerate(indices):
+        if i == 0:
+            gradOutsideVecs[idx, :] += (-grad[i, :])
+        else:
+            gradOutsideVecs[idx, :] += grad[i, :]
 
     ### END YOUR CODE
 
@@ -123,16 +152,10 @@ def skipgram(currentCenterWord, windowSize, outsideWords, word2Ind,
     currentCenterWord -- a string of the current center word
     windowSize -- integer, context window size
     outsideWords -- list of no more than 2*windowSize strings, the outside words
-    word2Ind -- a dictionary that maps words to their indices in
-              the word vector list
-    centerWordVectors -- center word vectors (as rows) for all words in vocab
-                        (V in pdf handout)
-    outsideVectors -- outside word vectors (as rows) for all words in vocab
-                    (U in pdf handout)
-    word2vecLossAndGradient -- the loss and gradient function for
-                               a prediction vector given the outsideWordIdx
-                               word vectors, could be one of the two
-                               loss functions you implemented above.
+    word2Ind -- a dictionary that maps words to their indices in the word vector list
+    centerWordVectors -- center word vectors (as rows) for all words in vocab (V in pdf handout)
+    outsideVectors -- outside word vectors (as rows) for all words in vocab (U in pdf handout)
+    word2vecLossAndGradient -- the loss and gradient function for a prediction vector given the outsideWordIdx word vectors, could be one of the two loss functions you implemented above.
 
     Return:
     loss -- the loss function value for the skip-gram model
@@ -146,8 +169,18 @@ def skipgram(currentCenterWord, windowSize, outsideWords, word2Ind,
     loss = 0.0
     gradCenterVecs = np.zeros(centerWordVectors.shape)
     gradOutsideVectors = np.zeros(outsideVectors.shape)
-
     ### YOUR CODE HERE
+    # center word vector
+    D = outsideVectors.shape[1]
+    idx_in = word2Ind[currentCenterWord]
+    vector_in = centerWordVectors[idx_in, :]
+    for word_out in outsideWords:
+        # outside word vector
+        idx_out = word2Ind[word_out]
+        loss_w, gradCenterVec_w, gradOutsideVecs_w = word2vecLossAndGradient(vector_in, idx_out, outsideVectors, dataset)
+        loss += loss_w
+        gradCenterVecs[idx_in, :] += gradCenterVec_w.reshape((D,))
+        gradOutsideVectors += gradOutsideVecs_w
 
     ### END YOUR CODE
 

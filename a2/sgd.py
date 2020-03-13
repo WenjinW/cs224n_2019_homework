@@ -45,15 +45,11 @@ def sgd(f, x0, step, iterations, postprocessing=None, useSaved=False,
     Implement the stochastic gradient descent method in this function.
 
     Arguments:
-    f -- the function to optimize, it should take a single
-         argument and yield two outputs, a loss and the gradient
-         with respect to the arguments
+    f -- the function to optimize, it should take a single argument and yield two outputs, a loss and the gradient with respect to the arguments
     x0 -- the initial point to start SGD from
     step -- the step size for SGD
     iterations -- total iterations to run SGD for
-    postprocessing -- postprocessing function for the parameters
-                      if necessary. In the case of word2vec we will need to
-                      normalize the word vectors to have unit length.
+    postprocessing -- postprocessing function for the parameters if necessary. In the case of word2vec we will need to normalize the word vectors to have unit length.
     PRINT_EVERY -- specifies how many iterations to output loss
 
     Return:
@@ -86,7 +82,8 @@ def sgd(f, x0, step, iterations, postprocessing=None, useSaved=False,
 
         loss = None
         ### YOUR CODE HERE
-
+        loss, gradient = f(x)
+        x = x - step * gradient
         ### END YOUR CODE
 
         x = postprocessing(x)
